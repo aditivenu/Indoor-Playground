@@ -1,0 +1,83 @@
+****Stored Procedure****
+1. To increment Member points by 20 whenever a member does a registration
+	CREATE OR REPLACE PROCEDURE IncMemPoints (thisMember_id IN Member_info.Member_id%TYPE) AS
+	BEGIN
+	UPDATE Member_Info set Member_points=Member_points+20 where Member_id=thisMember_id;
+	DBMS_OUTPUT.PUT_LINE('Member_points updated for'||thisMember_id);
+	END;
+	.
+	RUN;
+
+	BEGIN
+	IncMemPoints(101);
+	IncMemPoints(102);
+	END;
+	.
+	RUN;
+
+2. To check if the player is registering for a game more than 2 days before the game day
+	set serveroutput on;
+	create or replace procedure RegisterGame(rid in game_reg_info.reg_id%type, c in game_reg_info.court%type, rd in game_reg_info.regdatetime%type, gd in game_reg_info.gamedatetime%type) as
+	begin
+	if (to_date(rd))<(to_date(gd)-2) then
+	DBMS_OUTPUT.PUT_LINE('Can register only 48 hours before game');
+	else
+	insert into game_reg_info values(rid,c,rd,gd);
+	end if;
+	end;
+
+	
+****Trigger****
+1. To show admin when member points is between 200-500 or >500 for coupons
+	CREATE TABLE Member_Coupons
+	(
+	Member_id number(5),
+	Member_points number(3), 
+	Coupon Varchar(50),
+	PRIMARY KEY (Member_id)
+	);
+
+	Create or Replace Trigger MemCoupon  
+	After 
+	Update of Member_points ON Member_info
+	for each row
+	Begin
+	if (:NEW.Member_points>500) then
+	Insert into Member_Coupons(Member_id,Member_points,Coupon) values (:NEW.Member_id,:NEW.Member_points,'Coupon for equipment available');
+	elsif (:NEW.Member_points>200) and (:NEW.Member_points<500) then
+	Insert into Member_Coupons(Member_id,Member_points,Coupon) values (:NEW.Member_id,:NEW.Member_points,'One free reg for court available');
+	else
+	Insert into Member_Coupons(Member_id,Member_points,Coupon) values (:NEW.Member_id,:NEW.Member_points,'Not eligible');
+	end if;
+	end;
+
+
+2. To show which employees are managers and which are staff
+	create table emp
+	(
+	emp_id number(5),
+	type varchar(10),
+	primary key(emp_id)
+	)
+
+	create or replace trigger sal
+	after insert or update of salary
+	on employees
+	for each row
+	begin
+	case
+	when inserting then
+	if :NEW.salary=99 then
+	insert into emp values(:NEW.emp_id,'Manager');
+	elsif :NEW.salary=49 then
+	insert into emp values(:NEW.emp_id,'Staff');
+	end if;
+	when updating then
+	if :NEW.salary=99 then
+	insert into emp values(:NEW.emp_id,'Manager');
+	elsif :NEW.salary=49 then
+	insert into emp values(:NEW.emp_id,'Staff');
+	end if;
+	end case;
+	end;
+
